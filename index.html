@@ -359,6 +359,12 @@ document.addEventListener('submit', e => { if (e.target.id === 'book-form') subm
 async function start() {
   try {
     if (!DEMO) {
+      // 從 liff.line.me/<id>/admin.html 進來時，這頁只負責轉址到管理頁
+      const target = new URLSearchParams(location.search).get('liff.state') || '';
+      if (/^\/?admin\.html/.test(target)) {
+        await liff.init({ liffId: LIFF_ID });
+        return;
+      }
       await liff.init({ liffId: LIFF_ID });
       if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
       state.idToken = liff.getIDToken();
