@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>伊朋工作坊・報名管理</title>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root {
+    --bg: #f6f1e9; --card: #fffdf9; --ink: #2f2a25; --muted: #7a7065; --line: #e7ddcf;
+    --accent: #b4643a; --accent-soft: #f3e1d4; --ok: #4f7a52; --ok-soft: #e3eedf;
+    --warn: #b23b2e; --warn-soft: #f6dfdb; --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 15px/1.55 -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  a { color: var(--accent); }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+  header { padding: 20px 0 8px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  .brand { font-size: 13px; letter-spacing: .12em; color: var(--accent); font-weight: 600; }
+  h1 { margin: 2px 0 0; font-size: 24px; }
+  .refresh { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-size: 14px; font-weight: 600; }
+
+  .tabs { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 10px 0 12px; display: flex; gap: 8px; }
+  .tab { flex: 1; padding: 10px 0; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-weight: 600; color: var(--muted); }
+  .tab[aria-selected="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  .session { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+  .s-head { width: 100%; text-align: left; padding: 14px 16px; display: flex; gap: 14px; align-items: center; }
+  .date { flex: none; width: 56px; text-align: center; border-radius: 12px; background: var(--accent-soft); color: var(--accent); padding: 6px 0; font-weight: 700; line-height: 1.25; }
+  .date small { display: block; font-size: 12px; font-weight: 500; }
+  .s-info { flex: 1; min-width: 0; }
+  .s-title { font-size: 17px; font-weight: 700; margin: 0 0 2px; }
+  .s-meta { font-size: 13.5px; color: var(--muted); }
+  .count { flex: none; text-align: right; }
+  .count b { display: block; font-size: 20px; }
+  .count span { font-size: 12px; color: var(--muted); }
+  .pill { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; margin-left: 6px; vertical-align: 2px; }
+  .pill.open { background: var(--ok-soft); color: var(--ok); }
+  .pill.closed { background: var(--warn-soft); color: var(--warn); }
+  .pill.past { background: var(--line); color: var(--muted); }
+  .bar { height: 4px; background: var(--line); }
+  .bar i { display: block; height: 100%; background: var(--ok); }
+
+  .s-body { border-top: 1px solid var(--line); padding: 12px 16px 16px; }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .btn { padding: 8px 14px; border-radius: 999px; font-weight: 700; font-size: 14px; background: var(--accent); color: #fff; }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+  .btn.danger { background: var(--warn); color: #fff; }
+  .btn:disabled { opacity: .5; }
+  .summary { font-size: 13.5px; color: var(--muted); margin: 4px 0 10px; }
+
+  .person { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--line); }
+  .person:first-of-type { border-top: 0; }
+  .check { flex: none; width: 44px; height: 44px; border-radius: 12px; border: 2px solid var(--line); background: #fff; display: grid; place-items: center; }
+  .check svg { width: 22px; height: 22px; stroke: #fff; }
+  .check[aria-pressed="true"] { background: var(--ok); border-color: var(--ok); }
+  .p-info { flex: 1; min-width: 0; }
+  .p-name { font-weight: 700; font-size: 16px; }
+  .p-name .n { font-weight: 600; color: var(--accent); margin-left: 6px; font-size: 14px; }
+  .p-meta { font-size: 13.5px; color: var(--muted); }
+  .p-note { font-size: 13.5px; margin-top: 2px; }
+  .p-act { flex: none; }
+  .cancelled { opacity: .55; }
+  .cancelled .p-name { text-decoration: line-through; }
+  details { margin-top: 8px; }
+  summary { font-size: 13.5px; color: var(--muted); cursor: pointer; padding: 6px 0; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 12px; }
+
+  .sheet-bg { position: fixed; inset: 0; background: rgba(40,30,20,.4); z-index: 20; display: none; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; background: var(--card); border-radius: 22px 22px 0 0; padding: 20px 0 calc(20px + env(safe-area-inset-bottom)); display: none; }
+  .open-sheet .sheet-bg, .open-sheet .sheet { display: block; }
+  .sheet h2 { margin: 0 0 6px; font-size: 19px; }
+  .sheet p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  .sheet label { display: flex; gap: 10px; align-items: center; font-size: 15px; margin-bottom: 18px; }
+  .sheet input { width: 22px; height: 22px; accent-color: var(--accent); }
+  .row2 { display: flex; gap: 10px; }
+  .row2 .btn { flex: 1; padding: 13px; border-radius: 14px; font-size: 15px; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 12px; font-size: 14px; max-width: calc(100% - 32px); opacity: 0; transition: opacity .2s; z-index: 40; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .toast.err { background: var(--warn); }
+  .loading { text-align: center; padding: 60px 0; color: var(--muted); }
+  .busy { opacity: .6; pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand">伊朋工作坊</div>
+      <h1>報名管理</h1>
+    </div>
+    <button class="refresh" id="refresh">重新整理</button>
+  </header>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-up" aria-selected="true">即將開課</button>
+    <button class="tab" role="tab" id="tab-past" aria-selected="false">已結束（14 天內）</button>
+  </nav>
+  <main id="main"><div class="loading">載入中…</div></main>
+</div>
+
+<div class="sheet-bg" id="sheet-bg"></div>
+<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><div class="wrap" id="sheet"></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const LIFF_ID = '2012347943-naGvenRX';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyYvlEX8Jc37nBlYAyYz1c7wmwXVuSkCGywX98o7MTovT9l5T5Hs0f7cfULgD4_K1JO/exec';
+
+const DEMO = new URLSearchParams(location.search).has('demo');
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const state = { tab: 'up', sessions: [], openId: null, idToken: '', pending: null };
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+async function api(action, data = {}) {
+  if (DEMO) return demoApi(action, data);
+  const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(Object.assign({ action, idToken: state.idToken }, data)) });
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || '發生錯誤');
+  return json;
+}
+
+function apply(json) { state.sessions = json.sessions || []; render(); }
+
+function render() {
+  $('#tab-up').setAttribute('aria-selected', state.tab === 'up');
+  $('#tab-past').setAttribute('aria-selected', state.tab === 'past');
+  const list = state.sessions.filter(s => state.tab === 'up' ? !s.past : s.past);
+  if (state.tab === 'past') list.reverse();
+  if (!list.length) {
+    $('#main').innerHTML = `<div class="empty">${state.tab === 'up' ? '目前沒有即將開課的場次<br>到試算表的 Sessions 新增' : '最近 14 天沒有已結束的場次'}</div>`;
+    return;
+  }
+  $('#main').innerHTML = list.map(sessionHtml).join('');
+}
+
+function sessionHtml(s) {
+  const open = state.openId === s.id;
+  const pct = s.capacity ? Math.min(100, Math.round(s.booked / s.capacity * 100)) : 0;
+  const active = s.bookings.filter(b => b.status === 'booked');
+  const cancelled = s.bookings.filter(b => b.status !== 'booked');
+  const arrived = active.filter(b => b.attended).reduce((n, b) => n + b.people, 0);
+  const [md, wd] = [s.dateText.replace(/（.*/, ''), (s.dateText.match(/（(.)）/) || [])[1] || ''];
+  const pill = s.past ? '<span class="pill past">已結束</span>'
+    : s.status === 'closed' ? '<span class="pill closed">已關閉報名</span>' : '<span class="pill open">報名中</span>';
+  let body = '';
+  if (open) {
+    body = `<div class="s-body">
+      <div class="tools">
+        <button class="btn ghost" data-copy="${s.id}">複製點名表</button>
+        ${s.past ? '' : s.status === 'closed'
+          ? `<button class="btn ghost" data-status="${s.id}" data-to="open">重新開放報名</button>`
+          : `<button class="btn ghost" data-status="${s.id}" data-to="closed">關閉報名</button>`}
+      </div>
+      <div class="summary">已報名 ${s.booked} 人（${active.length} 筆）・已報到 ${arrived} 人${s.location ? '・' + esc(s.location) : ''}</div>
+      ${active.length ? active.map(personHtml).join('') : '<div class="empty" style="padding:20px">還沒有人報名</div>'}
+      ${cancelled.length ? `<details><summary>已取消 ${cancelled.length} 筆</summary>${cancelled.map(personHtml).join('')}</details>` : ''}
+    </div>`;
+  }
+  return `<section class="session">
+    <button class="s-head" data-toggle="${s.id}" aria-expanded="${open}">
+      <div class="date">${esc(md)}<small>週${esc(wd)}</small></div>
+      <div class="s-info"><div class="s-title">${esc(s.title)}${pill}</div><div class="s-meta">${esc(s.timeText)}</div></div>
+      <div class="count"><b>${s.booked}/${s.capacity}</b><span>人</span></div>
+    </button>
+    <div class="bar"><i style="width:${pct}%"></i></div>
+    ${body}
+  </section>`;
+}
+
+function personHtml(b) {
+  const live = b.status === 'booked';
+  return `<div class="person ${live ? '' : 'cancelled'}">
+    ${live ? `<button class="check" data-attend="${b.id}" aria-pressed="${b.attended}" aria-label="${esc(b.name)} 報到">${CHECK}</button>` : '<div style="width:44px"></div>'}
+    <div class="p-info">
+      <div class="p-name">${esc(b.name)}<span class="n">${b.people} 位</span></div>
+      <div class="p-meta"><a href="tel:${esc(b.phone.replace(/[^0-9+]/g, ''))}">${esc(b.phone)}</a>・#${b.id}・${esc(b.created)} 報名</div>
+      ${b.note ? `<div class="p-note">備註：${esc(b.note)}</div>` : ''}
+    </div>
+    ${live ? `<div class="p-act"><button class="btn ghost" data-cancel="${b.id}">取消</button></div>` : ''}
+  </div>`;
+}
+
+function findBooking(id) {
+  for (const s of state.sessions) { const b = s.bookings.find(x => x.id === id); if (b) return { s, b }; }
+  return {};
+}
+
+function openSheet(html) { $('#sheet').innerHTML = html; document.body.classList.add('open-sheet'); }
+function closeSheet() { document.body.classList.remove('open-sheet'); state.pending = null; }
+
+function askCancel(id) {
+  const { s, b } = findBooking(id);
+  if (!b) return;
+  state.pending = id;
+  openSheet(`<h2 id="sheet-title">取消 ${esc(b.name)} 的預約？</h2>
+    <p>${esc(s.title)}・${esc(s.dateText)} ${esc(s.timeText)}・${b.people} 位<br>名額會釋出，課前提醒也會一起取消。</p>
+    <label><input type="checkbox" id="notify" checked> 用 LINE 通知學員（會用掉 1 則推播）</label>
+    <div class="row2"><button class="btn ghost" id="keep">返回</button><button class="btn danger" id="do-cancel">確定取消</button></div>`);
+}
+
+async function doCancel() {
+  const id = state.pending; const notify = $('#notify').checked;
+  $('#do-cancel').disabled = true; $('#do-cancel').textContent = '處理中…';
+  try { apply(await api('admin_cancel', { bookingId: id, notify })); closeSheet(); toast('已取消預約' + (notify ? '，已通知學員' : '')); }
+  catch (err) { closeSheet(); toast(err.message, true); }
+}
+
+async function attend(btn) {
+  const id = Number(btn.dataset.attend);
+  const next = btn.getAttribute('aria-pressed') !== 'true';
+  btn.setAttribute('aria-pressed', next);
+  btn.closest('.person').classList.add('busy');
+  try { apply(await api('admin_attend', { bookingId: id, attended: next })); }
+  catch (err) { toast(err.message, true); render(); }
+}
+
+async function setStatus(btn) {
+  const id = Number(btn.dataset.status); const to = btn.dataset.to;
+  btn.disabled = true;
+  try { apply(await api('admin_session', { sessionId: id, status: to })); toast(to === 'closed' ? '已關閉報名' : '已重新開放報名'); }
+  catch (err) { toast(err.message, true); render(); }
+}
+
+async function copyRoster(id) {
+  const s = state.sessions.find(x => x.id === id);
+  const active = s.bookings.filter(b => b.status === 'booked');
+  const lines = active.map((b, i) => `${i + 1}. ${b.attended ? '☑' : '☐'} ${b.name}（${b.people} 位）${b.phone}${b.note ? '　備註：' + b.note : ''}`);
+  const text = `${s.title}\n${s.dateText} ${s.timeText}${s.location ? '\n' + s.location : ''}\n共 ${s.booked} 人\n\n${lines.join('\n') || '（尚無報名）'}`;
+  try { await navigator.clipboard.writeText(text); toast('點名表已複製，可以貼到 LINE 或記事本'); }
+  catch (_) {
+    openSheet(`<h2 id="sheet-title">點名表</h2><p>長按下面的文字全選複製</p>
+      <textarea readonly style="width:100%;height:240px;font:inherit;font-size:14px;padding:10px;border-radius:12px;border:1px solid var(--line)">${esc(text)}</textarea>
+      <div class="row2" style="margin-top:12px"><button class="btn ghost" id="keep">關閉</button></div>`);
+  }
+}
+
+let toastTimer;
+function toast(msg, err) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (err ? ' err' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = 'toast', 2800);
+}
+
+async function load() {
+  try { apply(await api('admin_init')); }
+  catch (err) { $('#main').innerHTML = `<div class="empty">${esc(err.message)}<br><br><button class="btn" onclick="location.reload()">重新整理</button></div>`; }
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('button, .sheet-bg');
+  if (!t) return;
+  if (t.id === 'tab-up') { state.tab = 'up'; render(); }
+  else if (t.id === 'tab-past') { state.tab = 'past'; render(); }
+  else if (t.id === 'refresh') { $('#main').innerHTML = '<div class="loading">載入中…</div>'; load(); }
+  else if (t.dataset.toggle) { const id = Number(t.dataset.toggle); state.openId = state.openId === id ? null : id; render(); }
+  else if (t.dataset.attend) attend(t);
+  else if (t.dataset.cancel) askCancel(Number(t.dataset.cancel));
+  else if (t.dataset.status) setStatus(t);
+  else if (t.dataset.copy) copyRoster(Number(t.dataset.copy));
+  else if (t.id === 'do-cancel') doCancel();
+  else if (t.id === 'keep' || t.id === 'sheet-bg') closeSheet();
+});
+
+async function start() {
+  try {
+    if (!DEMO) {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+      state.idToken = liff.getIDToken();
+    }
+    await load();
+    const up = state.sessions.find(s => !s.past);
+    if (up) { state.openId = up.id; render(); }
+  } catch (err) {
+    $('#main').innerHTML = `<div class="empty">${esc(err.message || '載入失敗')}</div>`;
+  }
+}
+
+/* 示範模式：網址加 ?demo */
+function demoApi(action, data) {
+  const db = demoApi.db || (demoApi.db = { sessions: [
+    { id: 2, title: '精油基礎課程', dateText: '11/7（六）', timeText: '08:00–12:00', location: '地點另行公布', capacity: 20, price: 1500, status: 'open', past: false, booked: 4, bookings: [
+      { id: 1, name: '王小明', phone: '0912345678', people: 2, note: '素食', status: 'booked', created: '11/3 14:20', attended: false },
+      { id: 3, name: '陳美玲', phone: '0922333444', people: 1, note: '', status: 'booked', created: '11/3 15:02', attended: true },
+      { id: 4, name: '林志強', phone: '0933555666', people: 1, note: '', status: 'booked', created: '11/3 15:30', attended: false },
+      { id: 2, name: '張雅婷', phone: '0955111222', people: 1, note: '', status: 'cancelled', created: '11/3 14:40', attended: false } ] },
+    { id: 1, title: '範例：手工皂入門課', dateText: '11/7（六）', timeText: '14:00–16:00', location: '伊朋工作坊', capacity: 8, price: 1200, status: 'closed', past: false, booked: 0, bookings: [] },
+    { id: 9, title: '蜜蠟護唇膏', dateText: '10/25（六）', timeText: '10:00–12:00', location: '伊朋工作坊', capacity: 6, price: 800, status: 'open', past: true, booked: 5, bookings: [] } ] });
+  const recount = s => { s.booked = s.bookings.filter(b => b.status === 'booked').reduce((n, b) => n + b.people, 0); };
+  const all = () => db.sessions.flatMap(s => s.bookings.map(b => ({ s, b })));
+  if (action === 'admin_cancel') { const x = all().find(x => x.b.id === data.bookingId); x.b.status = 'cancelled'; recount(x.s); }
+  if (action === 'admin_attend') { all().find(x => x.b.id === data.bookingId).b.attended = data.attended; }
+  if (action === 'admin_session') { db.sessions.find(s => s.id === data.sessionId).status = data.status; }
+  return new Promise(r => setTimeout(() => r({ ok: true, sessions: JSON.parse(JSON.stringify(db.sessions)) }), 250));
+}
+
+start();
+</script>
+</body>
+</html>
